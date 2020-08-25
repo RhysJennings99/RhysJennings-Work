@@ -1,0 +1,306 @@
+---
+title: "Untitled"
+author: "Rhys Jenninhgs"
+date: "16/05/2020"
+output: html_document
+---
+```{r}
+training = read.csv("carseatsTrain.csv")
+testing = read.csv("carseatsTest.csv")
+
+training[1:10]
+
+```
+
+```{r}
+library(tree)
+#Train the ree
+training_tree = tree(Sales~., training)
+
+summary(training_tree)
+plot(training_tree)
+text(training_tree, pretty=0)
+
+#Find MSE for the training data
+training_prediction=predict(training_tree, training)
+mean((training_prediction - training[,'Sales'])^2)
+
+#Find MSE for the testing data
+testing_prediction=predict(training_tree, testing)
+mean((testing_prediction - testing[,'Sales'])^2)
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+cv.training = cv.tree(training_tree)
+plot(cv.training$size, cv.training$dev, type='b', main="Cross-validation")
+```
+
+```{r}
+prune.training=prune.tree(training_tree,best=16)
+#plot(prune.training)
+#text(prune.training, pretty=0)
+
+training_prediction=predict(prune.training, training)
+
+mean((training_prediction - training[,'Sales'])^2)
+
+testing_prediction=predict(prune.training, testing)
+
+mean((testing_prediction - testing[,'Sales'])^2)
+
+```
+
+```{r}
+library(randomForest)
+
+bag.training=randomForest(Sales~., data= training, mtry=9, importance=TRUE)
+
+training_prediction=predict(bag.training, training)
+
+mean((training_prediction - training[,'Sales'])^2)
+
+testing_prediction=predict(bag.training, testing)
+
+mean((testing_prediction - testing[,'Sales'])^2)
+```
+
+
+
+```{r}
+train =c()
+test =c()
+for(i in 1:9){
+  rf.training=randomForest(Sales~., data= training, mtry=i,
+                           importance=TRUE)
+  
+  training_prediction=predict(rf.training, training)
+
+
+  MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+  testing_prediction=predict(rf.training, testing)
+
+  MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+  
+  train = c(train, MSEtrain)
+  test = c(test, MSEtest)
+
+}
+
+results <- data.frame(i = c(1,2,3,4,5,6,7,8,9), MSE_Training=train, MSE_Testing=test)
+print(results)
+
+```
+Yes, Very effective - i=9 is bagging. So a random forest of 6-9 all produce very similar  MSE_training, while 5 produces lowest testingmse. 
+
+```{r}
+training_prediction=predict(rf.training, training)
+
+mean((training_prediction - training[,'Sales'])^2)
+
+testing_prediction=predict(rf.training, testing)
+
+mean((testing_prediction - testing[,'Sales'])^2)
+```
+
+```{r}
+library(gbm)
+
+train =c()
+test =c()
+
+trees = c(10, 100, 500, 1000, 5000, 10000)
+for (i in trees){
+  print(i)
+  boost.training=gbm(Sales~., data=training, distribution="gaussian",n.trees=i ,
+                     interaction.depth=5)
+  
+  training_prediction=predict(boost.training, training, n.trees=i)
+
+  MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+  testing_prediction=predict(boost.training, testing, n.trees=i)
+
+  MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+  
+  train = c(train, MSEtrain)
+  test = c(test, MSEtest)
+}
+
+results <- data.frame(i = c(10, 100, 500, 1000, 5000, 10000), MSE_Training=train, MSE_Testing=test)
+print(results)
+
+```
+
+
+```{r}
+train =c()
+test =c()
+set.seed(2)
+trees = c(1,5,10,20,30,40)
+for (i in trees){
+  print(i)
+  boost.training=gbm(Sales~., data=training, distribution="gaussian",n.trees=100 ,
+                     interaction.depth=i)
+  
+  training_prediction=predict(boost.training, training, n.trees=100)
+
+  MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+  testing_prediction=predict(boost.training, testing, n.trees=100)
+
+  MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+  
+  train = c(train, MSEtrain)
+  test = c(test, MSEtest)
+}
+
+results <- data.frame(i = c(1,5,10,20,30,40), MSE_Training=train, MSE_Testing=test)
+print(results)
+```
+
+```{r}
+set.seed(2)
+ boost.training=gbm(Sales~., data=training, distribution="gaussian",n.trees=100 ,
+                     interaction.depth=2)
+  
+  training_prediction=predict(boost.training, training, n.trees=100)
+
+  MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+  testing_prediction=predict(boost.training, testing, n.trees=100)
+
+  MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+  
+  print(MSEtrain)
+  print(MSEtest)
+```
+
+```{r}
+train =c()
+test =c()
+set.seed(2)
+trees = c(0.001,0.01, 0.1, 0.2, 0.5, 1)
+for (i in trees){
+  print(i)
+  boost.training=gbm(Sales~., data=training, distribution="gaussian",n.trees=1000 ,
+                     interaction.depth=5, shrinkage=i)
+  
+  training_prediction=predict(boost.training, training, n.trees=1000)
+
+  MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+  testing_prediction=predict(boost.training, testing, n.trees=1000)
+
+  MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+  
+  train = c(train, MSEtrain)
+  test = c(test, MSEtest)
+}
+
+results <- data.frame(i = c(0.001,0.01, 0.1, 0.2, 0.5, 1), MSE_Training=train, MSE_Testing=test)
+print(results)
+```
+
+
+
+We seem to get the best with n.trees= 1000, shrinkage = 0.01, interaction depth = 5
+
+
+```{r}
+boost.training=gbm(Sales~., data=training, distribution="gaussian",n.trees=2000 ,
+                     interaction.depth=5, shrinkage=0.01)
+  
+training_prediction=predict(boost.training, training, n.trees=2000)
+
+MSEtrain <- mean((training_prediction - training[,'Sales'])^2)
+
+testing_prediction=predict(boost.training, testing, n.trees=2000)
+
+MSEtest <- mean((testing_prediction - testing[,'Sales'])^2)
+summary(boost.training)
+
+MSEtrain
+MSEtest
+```
+
+Our boosted model performed the best, and Price, CompPrice, Age and population were all the most important predictors. 
+
+
+
+
+Question 3)
+```{r}
+clusterData = read.csv("A3data2.csv")
+clusterData[,1:2]
+plot(clusterData$x1, clusterData$x2)
+```
+
+```{r}
+km.out=kmeans(clusterData[,1:2], 3, nstart=50)
+
+all_points = c(clusterData$x1, clusterData$x2)
+range = c(min(all_points), max(all_points))
+
+plot(clusterData[,1:2,],col=(km.out$cluster+1), 
+     xlim=range, ylim=range, main="KMeans Clusters for given data")
+points(km.out$centers)
+legend("topright", legend=c("Cluster 1", "Cluster 2", "Cluster 3"), col=c(2,3,4), pch=20,)
+```
+
+```{r}
+hc.complete=hclust(dist(clusterData[,1:2]), method="complete")
+plot(hc.complete ,main="Complete Linkage ")
+plot(clusterData[,1:2,],col=(cutree(hc.complete, 3)+1), 
+     main="Complete hierarchical Clusters for given data",xlim=range, ylim=range )
+```
+```{r}
+hc.single=hclust(dist(clusterData[,1:2]), method="single")
+plot(hc.single ,main="Single Linkage ")
+plot(clusterData[,1:2,],col=(cutree(hc.single, 5)+1), 
+     main="Single hierarchical Clusters for given data")
+```
+```{r}
+
+x = scale(clusterData[,1:2], center=TRUE, scale=TRUE)
+
+km.out=kmeans(x, 3, nstart=50)
+
+all_points = c(clusterData$x1, clusterData$x2)
+range = c(min(all_points), max(all_points))
+
+plot(x,col=(km.out$cluster+1),  
+     xlim=range, ylim=range, main="KMeans Clusters for given data")
+points(km.out$centers)
+legend("topright", legend=c("Cluster 1", "Cluster 2", "Cluster 3"), col=c(2,3,4), pch=20,)
+
+```
+
+```{r}
+hc.complete=hclust(dist(x), method="complete")
+plot(hc.complete ,main="Complete Linkage ")
+plot(x,col=(cutree(hc.complete, 3)+1),
+     main="Complete hierarchical Clusters for given data",xlim=range, ylim=range )
+```
+
+```{r}
+x = scale(clusterData[,1:2], center=TRUE, scale=TRUE)
+
+hc.complete=hclust(dist(x), method="single")
+plot(hc.complete ,main="Single Linkage ")
+plot(x,col=(cutree(hc.complete, 3)+1),
+     main="Single hierarchical Clusters for given data",xlim=range, ylim=range )
+
+
+
+
+```
+
+
+

@@ -1,0 +1,116 @@
+---
+title: "RAssignment"
+author: "Rhys Jenninhgs"
+date: "03/05/2020"
+output: html_document
+---
+
+```{r}
+training = read.csv("BankTest.csv")
+testing = read.csv("BankTrain.csv")
+```
+
+
+```{r}
+glm.fits=glm(y~x1+x2, data=training, family=binomial)
+
+summary(glm.fits)
+```
+If this is right, the pvalues are s olow for x1 and x2 we can conclude that there is an association between x1/x2 and whether the note has been forged or not. We can see that a one-unit increase in x1 results in decreasing the log odds of being a forged banknote by -1.01(2dp). One unit increase of x2 results in decreasing the log odds of being a forged bank note by -0.28(dp).
+
+
+- check this stuff agaisnt the weird situation described by the student about less likely to default (look in the textbook)
+
+```{r}
+training$x1
+```
+
+```{r}
+
+
+
+#X1_range <- seq(from=min(training$X1), to=max(training$X), by=.01)
+probs <- (exp(0.56697 + (-1.01366*training$x1) + (-0.27964*training$x2))) /(1 + (exp(0.56697 + (-1.01366*training$x1) + (-0.27964*training$x2))))
+))
+
+```
+
+
+```{r}
+probs <- (exp(0.56697 + (-1.01366*testing$x1) + (-0.27964*testing$x2))) /(1 + (exp(0.56697 + (-1.01366*testing$x1) + (-0.27964*testing$x2))))
+
+
+
+probs[1:10]
+
+
+
+```
+
+```{r}
+glm.pred = rep("genuine", length(testing$x1))
+glm.pred[probs>.5] = "forged"
+
+test_y = rep("genuine", length(testing$y))
+test_y[testing$y == 1] = "forged"
+
+
+table(glm.pred, test_y)
+```
+Corretly said 372/434 forged notes were forged.
+Correctly said 476/526 genuine notes were genuine
+
+So correct for 848/960
+
+
+
+```{r}
+glm.pred = rep("genuine", length(testing$x1))
+glm.pred[probs>.7] = "forged"
+
+table(glm.pred, test_y)
+
+
+
+```
+
+
+```{r}
+glm.pred = rep("genuine", length(testing$x1))
+glm.pred[probs>.3] = "forged"
+
+table(glm.pred, test_y)
+
+
+```
+
+
+
+```{r}
+library(MASS)
+lda.fit=lda(y~x1+x2, data=training)
+lda.fit
+```
+
+
+```{r}
+
+glm.probsidk <- predict(glm.fits, newdata=testing, type="response")
+
+
+glm.probsidk[1:10]
+
+probs[1:10]
+```
+
+
+
+
+
+
+
+
+
+
+
+
